@@ -20,7 +20,7 @@ namespace WebSocketRepro
         {
             TestServer testServer = InitializeServer();
             var webSocket = await EstablishWebSocket(testServer);
-            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client initiated close", CancellationToken.None); // this throws!
+            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client initiated close", CancellationToken.None);
         }
 
         private static async Task<WebSocket> EstablishWebSocket(TestServer testServer)
@@ -42,15 +42,10 @@ namespace WebSocketRepro
             {
                 app.Use(async (context, next) =>
                 {
-                    if (context.WebSockets.IsWebSocketRequest)
-                    {
-                        var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                        var buffer = WebSocket.CreateServerBuffer(4096);
-                        var msg = await webSocket.ReceiveAsync(buffer, context.RequestAborted); // wait for the close message
-                        webSocket.Dispose();
-                    }
-
-                    await next();
+                    var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                    var buffer = WebSocket.CreateServerBuffer(4096);
+                    var msg = await webSocket.ReceiveAsync(buffer, context.RequestAborted); // wait for the close message
+                    await webSocket.CloseAsync(msg.CloseStatus.Value, msg.CloseStatusDescription, context.RequestAborted);
                 });
             }
         }
